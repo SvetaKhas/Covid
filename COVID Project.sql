@@ -47,7 +47,7 @@ GROUP BY location
 ORDER BY DeathCount DESC
 
 -- See continent break down of death count
-SELECT continent,  sum(cast(new_deaths as int)) as DeathCount
+SELECT continent, sum(cast(new_deaths as int)) as DeathCount
 FROM PortfolioProject..deaths$
 WHERE continent IS NOT NULL 
 GROUP BY continent
@@ -55,15 +55,16 @@ HAVING sum(cast(total_deaths as int)) IS NOT NULL
 ORDER BY 2 DESC 
 
 -- Worldwide numbers
-SELECT location, max(total_cases) as TotalCases,max(population) as WorldPopulation, max(cast(total_deaths as int)) as TotaDeaths, max(cast(total_deaths as int))/max(population)*100 as DeathRate
+SELECT location, max(total_cases) as TotalCases,max(population) as WorldPopulation, 
+	   max(cast(total_deaths as int)) as TotaDeaths, max(cast(total_deaths as int))/max(population)*100 as DeathRate
 FROM PortfolioProject..deaths$
 WHERE location='World'
 GROUP BY location
 ORDER BY 1,2
 
 --Join Deaths and Vaccination tables. Add rolling total vaccinations.
-SELECT death.continent, death.location, death.date, death.population, vax.new_vaccinations
-,SUM(CONVERT(BIGINT,vax.new_vaccinations)) OVER (PARTITION BY death.location ORDER BY death.location, death.date) as RollingTotalVaccinations
+SELECT death.continent, death.location, death.date, death.population, vax.new_vaccinations,
+	   SUM(CONVERT(BIGINT,vax.new_vaccinations)) OVER (PARTITION BY death.location ORDER BY death.location, death.date) as RollingTotalVaccinations
 FROM PortfolioProject..deaths$ death
 JOIN PortfolioProject..vaccin$ vax
  ON death.location=vax.location
@@ -75,13 +76,13 @@ ORDER BY 2,3
 WITH Vaxrate (Continent,Location, Date, Population, NewVaccinations,RollingTotalVaccinations)
 AS 
 (
-SELECT death.continent, death.location, death.date, death.population, vax.new_vaccinations
-,SUM(CONVERT(BIGINT,vax.new_vaccinations)) OVER (PARTITION BY death.location ORDER BY death.location, death.date) as RollingTotalVaccinations
-FROM PortfolioProject..deaths$ death
-JOIN PortfolioProject..vaccin$ vax
- ON death.location=vax.location
- AND death.date=vax.date
-WHERE death.continent IS NOT NULL 
+ SELECT death.continent, death.location, death.date, death.population, vax.new_vaccinations,
+	   SUM(CONVERT(BIGINT,vax.new_vaccinations)) OVER (PARTITION BY death.location ORDER BY death.location, death.date) as RollingTotalVaccinations
+ FROM PortfolioProject..deaths$ death
+ JOIN PortfolioProject..vaccin$ vax
+   ON death.location=vax.location
+  AND death.date=vax.date
+ WHERE death.continent IS NOT NULL 
 )
 SELECT *,RollingTotalVaccinations/Population as RollingVaccinated
 FROM VaxRate
@@ -90,17 +91,17 @@ FROM VaxRate
 DROP TABLE IF EXISTS #PercentPopulationVaccinated
 CREATE TABLE #PercentPopulationVaccinated
 (
-continent nvarchar(255),
-location nvarchar(255),
-date datetime,
-population numeric,
-new_vaccinations numeric,
-RollingVaccinated numeric
+ continent nvarchar(255),
+ location nvarchar(255),
+ date datetime,
+ population numeric,
+ new_vaccinations numeric,
+ RollingVaccinated numeric
 )
 
 INSERT INTO #PercentPopulationVaccinated
-SELECT death.continent, death.location, death.date, death.population, vax.new_vaccinations
-,SUM(CONVERT(BIGINT,vax.new_vaccinations)) OVER (PARTITION BY death.location ORDER BY death.location, death.date) as RollingTotalVaccinations
+SELECT death.continent, death.location, death.date, death.population, vax.new_vaccinations,
+       SUM(CONVERT(BIGINT,vax.new_vaccinations)) OVER (PARTITION BY death.location ORDER BY death.location, death.date) as RollingTotalVaccinations
 FROM PortfolioProject..deaths$ death
 JOIN PortfolioProject..vaccin$ vax
  ON death.location=vax.location
@@ -115,8 +116,8 @@ FROM #PercentPopulationVaccinated
 DROP VIEW IF EXISTS PercentPopVaccinated
 
 CREATE VIEW PercentPopVaccinated AS
-SELECT death.continent, death.location, death.date, death.population, vax.new_vaccinations, vax.people_fully_vaccinated_per_hundred
-,SUM(CONVERT(BIGINT,vax.new_vaccinations)) OVER (PARTITION BY death.location ORDER BY death.location, death.date) as RollingTotalVaccinations
+SELECT death.continent, death.location, death.date, death.population, vax.new_vaccinations, vax.people_fully_vaccinated_per_hundred,
+       SUM(CONVERT(BIGINT,vax.new_vaccinations)) OVER (PARTITION BY death.location ORDER BY death.location, death.date) as RollingTotalVaccinations
 FROM PortfolioProject..deaths$ death
 JOIN PortfolioProject..vaccin$ vax
  ON death.location=vax.location
@@ -131,8 +132,8 @@ FROM PercentPopVaccinated
 DROP VIEW IF EXISTS DeathHospvsFactors
 
 CREATE VIEW DeathHospvsFactors AS
-SELECT death.continent,death.location, death.date, cast(death.new_deaths as float) as NewDeaths, cast(death.new_cases as float) as NewCases
-,cast(vax.new_vaccinations as float) as NewVaccinations, vax.aged_65_older, vax.median_age, vax.gdp_per_capita, vax.cardiovasc_death_rate, cast(vax.extreme_poverty as float) as ExtremePoverty
+SELECT death.continent,death.location, death.date, cast(death.new_deaths as float) as NewDeaths, cast(death.new_cases as float) as NewCases,
+       cast(vax.new_vaccinations as float) as NewVaccinations, vax.aged_65_older, vax.median_age, vax.gdp_per_capita, vax.cardiovasc_death_rate, cast(vax.extreme_poverty as float) as ExtremePoverty
 FROM PortfolioProject..deaths$ death
 JOIN PortfolioProject..vaccin$ vax
  ON death.location=vax.location
